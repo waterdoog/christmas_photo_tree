@@ -17,8 +17,40 @@ if (DATABASE_URL.endsWith("'") || DATABASE_URL.endsWith('"')) {
   DATABASE_URL = DATABASE_URL.slice(0, -1);
 }
 
+// Remove channel_binding parameter as it may cause issues with Neon serverless
+// Neon serverless uses HTTP API, not direct PostgreSQL connection
+if (DATABASE_URL.includes('channel_binding=')) {
+  DATABASE_URL = DATABASE_URL.replace(/[&?]channel_binding=[^&]*/g, '');
+  // Clean up any double ? or & at the start
+  DATABASE_URL = DATABASE_URL.replace(/\?&/, '?').replace(/&&/g, '&');
+}
+
+// Ensure URL is properly formatted and validated
+try {
+  // Validate URL format - this will throw if URL is invalid
+  const url = new URL(DATABASE_URL);
+  
+  // Reconstruct URL with only necessary parameters for Neon serverless
+  const params = new URLSearchParams();
+  if (url.searchParams.has('sslmode')) {
+    params.set('sslmode', url.searchParams.get('sslmode') || 'require');
+  } else {
+    params.set('sslmode', 'require');
+  }
+  
+  DATABASE_URL = `${url.protocol}//${url.username}:${url.password}@${url.host}${url.pathname}?${params.toString()}`;
+  console.log('✅ URL cleaned and validated');
+} catch (e) {
+  console.warn('⚠️ URL parsing failed, using original URL:', e);
+  // If URL parsing fails, try to at least remove channel_binding
+  if (DATABASE_URL.includes('channel_binding=')) {
+    DATABASE_URL = DATABASE_URL.replace(/[&?]channel_binding=[^&]*/g, '');
+  }
+}
+
 // Debug logging - always log in production to help diagnose issues
-console.log('🔍 Database URL configured:', DATABASE_URL ? `Yes (length: ${DATABASE_URL.length}, starts with: ${DATABASE_URL.substring(0, 20)}...)` : 'No');
+console.log('🔍 Database URL configured:', DATABASE_URL ? `Yes (length: ${DATABASE_URL.length})` : 'No');
+console.log('🔍 Database URL (first 60 chars):', DATABASE_URL ? DATABASE_URL.substring(0, 60) + '...' : 'NOT SET');
 console.log('🔍 Environment variables:', {
   hasVITE_DATABASE_URL: !!import.meta.env.VITE_DATABASE_URL,
   hasDATABASE_URL: !!import.meta.env.DATABASE_URL,

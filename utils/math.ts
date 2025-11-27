@@ -2,29 +2,57 @@ import * as THREE from 'three';
 import { TREE_CONFIG } from '../types';
 
 /**
- * Calculates a position on a spiral cone (The Tree)
+ * Calculates a position inside a Volumetric Cone using Golden Angle (Phyllotaxis)
+ * This fills the center of the tree, not just the surface.
  */
 export const getTreePosition = (index: number, total: number): THREE.Vector3 => {
-  const y = (index / total) * TREE_CONFIG.height; // Height from 0 to max
-  const progress = index / total; // 0 to 1
+  // Normalized height (0 at bottom, 1 at top)
+  const ratio = index / total;
   
-  // Radius gets smaller as we go up
-  const radius = TREE_CONFIG.radiusBottom * (1 - progress);
+  // Use cubic root to distribute points uniformly in volume
+  // This prevents clustering at the top (apex) of the cone
+  // y goes from 0 (bottom) to 1 (top)
+  const heightProgress = 1 - Math.pow(1 - ratio, 1/3);
   
-  // Spiral angle
-  const angle = progress * Math.PI * 2 * TREE_CONFIG.spiralTurns;
+  const y = heightProgress * TREE_CONFIG.height; 
+  
+  // Maximum radius at this height (Cone shape)
+  const maxRadiusAtHeight = TREE_CONFIG.radiusBottom * (1 - heightProgress);
+  
+  // Golden Angle for organic distribution without visible lines
+  const goldenAngle = Math.PI * (3 - Math.sqrt(5)); // ~2.3999 radians
+  const theta = index * goldenAngle;
+  
+  // Random radius distribution to fill volume
+  // sqrt(random) gives uniform distribution in a circle disc area
+  // We use a deterministic pseudo-random based on index to keep positions stable across renders
+  const pseudoRandom = (Math.sin(index * 12.9898) * 43758.5453) % 1;
+  const r = maxRadiusAtHeight * Math.sqrt(Math.abs(pseudoRandom));
 
-  const x = Math.cos(angle) * radius;
-  const z = Math.sin(angle) * radius;
+  const x = r * Math.cos(theta);
+  const z = r * Math.sin(theta);
   
   // Center the tree vertically
   return new THREE.Vector3(x, y - TREE_CONFIG.height / 2, z);
 };
 
 /**
+ * Calculates the rotation for an item on the tree to face OUTWARDS
+ */
+export const getTreeRotation = (position: THREE.Vector3): THREE.Euler => {
+  // Calculate angle from center (0,0) to position (x,z)
+  const angle = Math.atan2(position.x, position.z);
+  
+  // 0 rotation usually faces +Z. 
+  // We want the plane to face the vector (x,z).
+  // Standard LookAt behavior.
+  return new THREE.Euler(0, angle, 0);
+};
+
+/**
  * Calculates a random position inside a sphere (Dispersed mode)
  */
-export const getDispersedPosition = (radius: number = 8): THREE.Vector3 => {
+export const getDispersedPosition = (radius: number = 10): THREE.Vector3 => {
   const u = Math.random();
   const v = Math.random();
   const theta = 2 * Math.PI * u;

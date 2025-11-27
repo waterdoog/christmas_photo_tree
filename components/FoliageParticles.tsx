@@ -17,11 +17,10 @@ export const FoliageParticles: React.FC<FoliageParticlesProps> = ({ mode }) => {
   const treePositions = useMemo(() => {
     const arr = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
+      // Use the new Volumetric getTreePosition
+      // It already includes organic randomness (jitter) via pseudo-random radius
       const pos = getTreePosition(i, count);
-      // Add some jitter to the tree structure so it looks organic
-      pos.x += (Math.random() - 0.5) * 0.5;
-      pos.y += (Math.random() - 0.5) * 0.5;
-      pos.z += (Math.random() - 0.5) * 0.5;
+      
       arr[i * 3] = pos.x;
       arr[i * 3 + 1] = pos.y;
       arr[i * 3 + 2] = pos.z;
@@ -32,7 +31,7 @@ export const FoliageParticles: React.FC<FoliageParticlesProps> = ({ mode }) => {
   const dispersedPositions = useMemo(() => {
     const arr = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
-      const pos = getDispersedPosition(12); // Wider dispersion for particles
+      const pos = getDispersedPosition(14); // Wider dispersion
       arr[i * 3] = pos.x;
       arr[i * 3 + 1] = pos.y;
       arr[i * 3 + 2] = pos.z;

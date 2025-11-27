@@ -98,7 +98,7 @@ export const Experience: React.FC<ExperienceProps> = ({ photos, mode, rotationIn
       <SceneController mode={mode} rotationInputRef={rotationInputRef} />
 
       {/* Post Processing for Cinematic Look */}
-      <EffectComposer disableNormalPass>
+      <EffectComposer enableNormalPass={false}>
         <Bloom 
             luminanceThreshold={0.8} 
             mipmapBlur 

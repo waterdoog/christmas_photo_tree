@@ -1,5 +1,3 @@
-import * as THREE from 'three';
-
 export type DisplayMode = 'TREE' | 'DISPERSED';
 
 export interface PhotoData {
@@ -10,8 +8,8 @@ export interface PhotoData {
 
 // Configuration constants
 export const TREE_CONFIG = {
-  height: 12,
-  radiusBottom: 4.5,
-  spiralTurns: 4,
-  particleCount: 1500, // For the "needles"
+  height: 14, // Taller
+  radiusBottom: 6.5, // Wider base
+  spiralTurns: 8, // More turns for density
+  particleCount: 2500, // Much higher count for "Needles"
 };

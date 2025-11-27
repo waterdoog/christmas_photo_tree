@@ -1,9 +1,9 @@
 import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Image, Text } from '@react-three/drei';
+import { Image } from '@react-three/drei';
 import * as THREE from 'three';
 import { PhotoData, DisplayMode } from '../types';
-import { getTreePosition, getDispersedPosition, getRandomRotation } from '../utils/math';
+import { getTreePosition, getDispersedPosition, getRandomRotation, getTreeRotation } from '../utils/math';
 
 interface MemoryNodeProps {
   data: PhotoData;
@@ -17,8 +17,9 @@ export const MemoryNode: React.FC<MemoryNodeProps> = ({ data, index, total, mode
   
   // Precompute targets for both modes to keep it deterministic
   const treePos = useMemo(() => getTreePosition(index, total), [index, total]);
-  const dispersedPos = useMemo(() => getDispersedPosition(10), []);
+  const treeRot = useMemo(() => getTreeRotation(treePos), [treePos]);
   
+  const dispersedPos = useMemo(() => getDispersedPosition(12), []);
   const randomRot = useMemo(() => getRandomRotation(), []);
   
   // Smooth animation logic
@@ -30,22 +31,24 @@ export const MemoryNode: React.FC<MemoryNodeProps> = ({ data, index, total, mode
     // Lerp position
     groupRef.current.position.lerp(targetPos, 2.5 * delta);
     
-    // Lerp rotation: In tree mode, face outwards roughly, in dispersed, tumble slightly
+    // Lerp rotation
     if (mode === 'TREE') {
-        // Calculate lookAt target (center spine of tree, but maintain uprightness)
-        const currentPos = groupRef.current.position;
-        const angle = Math.atan2(currentPos.x, currentPos.z);
-        const targetRotY = angle + Math.PI; // Face out
+        // Face Outwards logic
+        // We use quaternion slerp for smoothness or simple Euler lerp
+        // Angle (treeRot.y) faces OUT from center.
         
         // Softly interpolate rotation
         groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, 0, delta * 2);
         groupRef.current.rotation.z = THREE.MathUtils.lerp(groupRef.current.rotation.z, 0, delta * 2);
         
-        // Quaternion slerp would be better but Euler lerp is enough for simple Y axis
-        // We manually animate Y towards target
-        const diff = targetRotY - groupRef.current.rotation.y;
-        // Normalize angle
-        let normalizedDiff = Math.atan2(Math.sin(diff), Math.cos(diff));
+        // Handle Y rotation wrap-around
+        let targetY = treeRot.y;
+        const currentY = groupRef.current.rotation.y;
+        
+        // Shortest path interpolation
+        const diff = targetY - currentY;
+        const normalizedDiff = Math.atan2(Math.sin(diff), Math.cos(diff));
+        
         groupRef.current.rotation.y += normalizedDiff * delta * 2;
 
     } else {
@@ -70,7 +73,7 @@ export const MemoryNode: React.FC<MemoryNodeProps> = ({ data, index, total, mode
         />
       </mesh>
       
-      {/* The Photo */}
+      {/* The Photo - Facing +Z relative to group */}
       <Image 
         url={data.url} 
         transparent 

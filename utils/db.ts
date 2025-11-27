@@ -2,15 +2,10 @@ import { neon } from '@neondatabase/serverless';
 import { v4 as uuidv4 } from 'uuid';
 import { PhotoData } from '../types';
 
-// Get database URL from environment variable
-const DATABASE_URL = (import.meta.env.VITE_DATABASE_URL || import.meta.env.DATABASE_URL) as string | undefined;
-
-if (!DATABASE_URL) {
-  console.error('DATABASE_URL or VITE_DATABASE_URL environment variable is not set');
-}
+const DATABASE_URL = 'postgresql://neondb_owner:npg_Ze0yU8GdlCxb@ep-long-heart-ab9b1fqo-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require';
 
 // Initialize the HTTP SQL client
-const sql = neon(DATABASE_URL || '');
+const sql = neon(DATABASE_URL);
 
 /**
  * Initializes the database table if it doesn't exist.

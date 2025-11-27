@@ -7,9 +7,12 @@ import { TREE_CONFIG } from '../types';
  */
 export const getTreePosition = (index: number, total: number): THREE.Vector3 => {
   // Normalized height (0 at bottom, 1 at top)
-  // We bias slightly towards bottom for fuller look: Math.pow(ratio, 0.8)
   const ratio = index / total;
-  const heightProgress = ratio; 
+  
+  // Use cubic root to distribute points uniformly in volume
+  // This prevents clustering at the top (apex) of the cone
+  // y goes from 0 (bottom) to 1 (top)
+  const heightProgress = 1 - Math.pow(1 - ratio, 1/3);
   
   const y = heightProgress * TREE_CONFIG.height; 
   

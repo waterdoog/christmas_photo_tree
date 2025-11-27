@@ -20,6 +20,32 @@ if (DATABASE_URL.includes('channel_binding=')) {
   DATABASE_URL = DATABASE_URL.replace(/\?&/, '?').replace(/&&/g, '&').replace(/&$/, '');
 }
 
+// Validate and normalize URL format
+try {
+  // Try to parse the URL to validate it
+  const url = new URL(DATABASE_URL);
+  
+  // Reconstruct a clean URL with only necessary parameters
+  const cleanParams = new URLSearchParams();
+  if (url.searchParams.has('sslmode')) {
+    cleanParams.set('sslmode', url.searchParams.get('sslmode') || 'require');
+  } else {
+    cleanParams.set('sslmode', 'require');
+  }
+  
+  // Reconstruct URL
+  DATABASE_URL = `${url.protocol}//${url.username}:${url.password}@${url.host}${url.pathname}?${cleanParams.toString()}`;
+  console.log('✅ URL validated and normalized');
+} catch (e) {
+  console.warn('⚠️ URL validation failed, using cleaned URL as-is:', e);
+  // If URL parsing fails, at least ensure it starts with postgresql://
+  if (!DATABASE_URL.startsWith('postgresql://')) {
+    console.error('❌ Invalid database URL format');
+    // Fallback to hardcoded URL if current one is invalid
+    DATABASE_URL = 'postgresql://neondb_owner:npg_Ze0yU8GdlCxb@ep-long-heart-ab9b1fqo-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require';
+  }
+}
+
 // Debug logging - always log in production to help diagnose issues
 console.log('🔍 Database URL configured:', DATABASE_URL ? `Yes (length: ${DATABASE_URL.length}, starts with: ${DATABASE_URL.substring(0, 20)}...)` : 'No');
 console.log('🔍 Environment variables:', {

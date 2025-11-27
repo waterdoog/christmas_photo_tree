@@ -86,8 +86,9 @@ console.log('🔍 Using database URL (length):', finalDatabaseUrl.length);
 
 // Initialize the HTTP SQL client
 // Use hardcoded URL to avoid any encoding issues
+// Version 1.0.2 should have better browser support
 let sql = neon(FALLBACK_URL);
-console.log('✅ Neon client initialized');
+console.log('✅ Neon client initialized (v1.0.2)');
 
 /**
  * Initializes the database table if it doesn't exist.

@@ -39,18 +39,20 @@ export const PhotoDetailModal: React.FC<PhotoDetailModalProps> = ({ photo, onClo
   const maxHeight = window.innerHeight - margin * 2;
   
   // Calculate dimensions to fit screen
-  let photoWidth = Math.min(maxWidth * 0.9, 600);
+  // Polaroid structure: white border frame + photo + gray caption area
+  const borderPadding = 20; // white border padding
+  let photoWidth = Math.min(maxWidth * 0.9, 600) - borderPadding * 2;
   let photoHeight = photoWidth / photoAspectRatio;
   
   // If too tall, adjust width
   const captionHeight = 80;
-  if (photoHeight + captionHeight > maxHeight) {
-    photoHeight = maxHeight - captionHeight;
+  if (photoHeight + captionHeight + borderPadding * 2 > maxHeight) {
+    photoHeight = maxHeight - captionHeight - borderPadding * 2;
     photoWidth = photoHeight * photoAspectRatio;
   }
   
-  const polaroidHeight = photoHeight + captionHeight;
-  const polaroidWidth = photoWidth;
+  const polaroidHeight = photoHeight + captionHeight + borderPadding * 2;
+  const polaroidWidth = photoWidth + borderPadding * 2;
 
   const handleBackgroundClick = async () => {
     // Save if editing before closing
@@ -65,13 +67,14 @@ export const PhotoDetailModal: React.FC<PhotoDetailModalProps> = ({ photo, onClo
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" 
       onClick={handleBackgroundClick}
     >
-      {/* Polaroid-style container - gray background like small images */}
+      {/* Polaroid-style container - white border frame like 3D preview */}
       <div 
-        className="relative bg-gray-200 shadow-2xl"
+        className="relative shadow-2xl"
         style={{ 
           width: `${polaroidWidth}px`,
           height: `${polaroidHeight}px`,
-          padding: '0'
+          backgroundColor: '#fdfdfd', // Polaroid white border color
+          padding: `${borderPadding}px`
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -94,18 +97,22 @@ export const PhotoDetailModal: React.FC<PhotoDetailModalProps> = ({ photo, onClo
           />
         </div>
 
-        {/* Caption area - bottom gray section, white handwriting text */}
+        {/* Caption area - bottom gray section, transparent text background */}
         <div 
-          className="bg-gray-200 flex items-center justify-center px-4"
-          style={{ height: `${captionHeight}px` }}
+          className="flex items-center justify-center px-4"
+          style={{ 
+            height: `${captionHeight}px`,
+            backgroundColor: '#e5e5e5' // Gray background like 3D preview
+          }}
         >
           {isEditing ? (
             <textarea
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
-              className="w-full bg-transparent border-none outline-none resize-none text-white handwriting text-lg"
+              className="w-full border-none outline-none resize-none text-white handwriting text-lg"
               style={{ 
                 fontFamily: "'Caveat', cursive",
+                backgroundColor: 'transparent', // Transparent background
                 minHeight: '40px',
                 lineHeight: '1.4',
                 color: '#ffffff'
@@ -125,6 +132,7 @@ export const PhotoDetailModal: React.FC<PhotoDetailModalProps> = ({ photo, onClo
               className="w-full text-center cursor-text handwriting text-white"
               style={{ 
                 fontFamily: "'Caveat', cursive",
+                backgroundColor: 'transparent', // Transparent background
                 fontSize: '24px',
                 minHeight: '40px',
                 lineHeight: '1.4',

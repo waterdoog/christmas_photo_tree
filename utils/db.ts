@@ -23,8 +23,13 @@ export const initDB = async () => {
         id TEXT PRIMARY KEY,
         url TEXT NOT NULL,
         aspect_ratio REAL NOT NULL,
+        caption TEXT,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
+    `;
+    // Add caption column if it doesn't exist (for existing databases)
+    await sql`
+      ALTER TABLE photos ADD COLUMN IF NOT EXISTS caption TEXT;
     `;
     console.log('✅ Database initialized successfully');
   } catch (error) {
@@ -38,12 +43,13 @@ export const initDB = async () => {
  */
 export const loadPhotos = async (): Promise<PhotoData[]> => {
   try {
-    const rows = await sql`SELECT id, url, aspect_ratio FROM photos ORDER BY created_at DESC`;
+    const rows = await sql`SELECT id, url, aspect_ratio, caption FROM photos ORDER BY created_at DESC`;
     console.log(`✅ Loaded ${rows.length} photos from database`);
     return rows.map(row => ({
       id: row.id,
       url: row.url,
-      aspectRatio: row.aspect_ratio
+      aspectRatio: row.aspect_ratio,
+      caption: row.caption || undefined
     }));
   } catch (error) {
     console.error('❌ Failed to load photos:', error);
@@ -108,13 +114,31 @@ export const savePhoto = async (file: File): Promise<PhotoData | null> => {
     const id = uuidv4();
     
     await sql`
-      INSERT INTO photos (id, url, aspect_ratio) 
-      VALUES (${id}, ${base64}, ${aspectRatio})
+      INSERT INTO photos (id, url, aspect_ratio, caption) 
+      VALUES (${id}, ${base64}, ${aspectRatio}, NULL)
     `;
     
     return { id, url: base64, aspectRatio };
   } catch (error) {
     console.error('Failed to save photo:', error);
     return null;
+  }
+};
+
+/**
+ * Updates photo caption in the database.
+ */
+export const updatePhotoCaption = async (id: string, caption: string): Promise<boolean> => {
+  try {
+    await sql`
+      UPDATE photos 
+      SET caption = ${caption} 
+      WHERE id = ${id}
+    `;
+    console.log('✅ Caption updated successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to update caption:', error);
+    return false;
   }
 };

@@ -15,6 +15,7 @@ interface ExperienceProps {
   photos: PhotoData[];
   mode: DisplayMode;
   rotationInputRef: React.MutableRefObject<number>;
+  onPhotoClick?: (photo: PhotoData) => void;
 }
 
 // Wrapper to handle frame updates for controls
@@ -58,7 +59,7 @@ const SceneController = ({ mode, rotationInputRef }: { mode: DisplayMode, rotati
   );
 }
 
-export const Experience: React.FC<ExperienceProps> = ({ photos, mode, rotationInputRef }) => {
+export const Experience: React.FC<ExperienceProps> = ({ photos, mode, rotationInputRef, onPhotoClick }) => {
   return (
     <Canvas
       dpr={[1, 2]}
@@ -86,6 +87,7 @@ export const Experience: React.FC<ExperienceProps> = ({ photos, mode, rotationIn
             index={index} 
             total={photos.length} 
             mode={mode}
+            onClick={onPhotoClick}
           />
         ))}
       </group>

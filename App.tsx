@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Experience } from './components/Experience';
 import { UI } from './components/UI';
+import { PhotoDetailModal } from './components/PhotoDetailModal';
 import { PhotoData, DisplayMode } from './types';
 import { initDB, loadPhotos, savePhoto } from './utils/db';
 
@@ -17,6 +18,7 @@ function App() {
   const [mode, setMode] = useState<DisplayMode>('TREE');
   const [isUploading, setIsUploading] = useState(false);
   const [dbInitialized, setDbInitialized] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<PhotoData | null>(null);
   
   // Shared ref for rotation velocity
   const rotationInputRef = useRef<number>(0);
@@ -24,18 +26,12 @@ function App() {
   // Initialize DB and load photos on mount
   useEffect(() => {
     const setup = async () => {
+      // Set initialized immediately to prevent black screen
+      setDbInitialized(true);
+      
       try {
-        // Add timeout to prevent infinite loading (longer for localhost)
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Database connection timeout')), 5000)
-        );
-        
-        // Race between init and timeout
-        await Promise.race([
-          initDB(),
-          timeoutPromise
-        ]);
-        
+        // Try to connect to DB in background
+        await initDB();
         const savedPhotos = await loadPhotos();
         
         if (savedPhotos.length > 0) {
@@ -44,10 +40,6 @@ function App() {
       } catch (error) {
         console.error('Database setup failed:', error);
         // Continue with default images even if DB fails
-        // This ensures the app doesn't get stuck
-      } finally {
-        // Always set initialized to true, even if DB connection failed
-        setDbInitialized(true);
       }
     };
     setup();
@@ -96,6 +88,7 @@ function App() {
               photos={photos} 
               mode={mode} 
               rotationInputRef={rotationInputRef}
+              onPhotoClick={setSelectedPhoto}
           />
         </Suspense>
       </div>
@@ -108,6 +101,15 @@ function App() {
         photoCount={photos.length}
         rotationInputRef={rotationInputRef}
         isUploading={isUploading}
+      />
+
+      {/* Photo Detail Modal */}
+      <PhotoDetailModal
+        photo={selectedPhoto}
+        onClose={() => setSelectedPhoto(null)}
+        onUpdate={(updatedPhoto) => {
+          setPhotos(prev => prev.map(p => p.id === updatedPhoto.id ? updatedPhoto : p));
+        }}
       />
     </div>
   );

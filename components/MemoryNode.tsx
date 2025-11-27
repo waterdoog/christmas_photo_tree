@@ -1,6 +1,6 @@
 import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Image } from '@react-three/drei';
+import { Image, Text } from '@react-three/drei';
 import * as THREE from 'three';
 import { PhotoData, DisplayMode } from '../types';
 import { getTreePosition, getDispersedPosition, getRandomRotation, getTreeRotation } from '../utils/math';
@@ -10,9 +10,10 @@ interface MemoryNodeProps {
   index: number;
   total: number;
   mode: DisplayMode;
+  onClick?: (data: PhotoData) => void;
 }
 
-export const MemoryNode: React.FC<MemoryNodeProps> = ({ data, index, total, mode }) => {
+export const MemoryNode: React.FC<MemoryNodeProps> = ({ data, index, total, mode, onClick }) => {
   const groupRef = useRef<THREE.Group>(null);
   
   // Precompute targets for both modes to keep it deterministic
@@ -59,8 +60,13 @@ export const MemoryNode: React.FC<MemoryNodeProps> = ({ data, index, total, mode
     }
   });
 
+  const handleClick = (e: any) => {
+    e.stopPropagation();
+    if (onClick) onClick(data);
+  };
+
   return (
-    <group ref={groupRef}>
+    <group ref={groupRef} onClick={handleClick} onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = 'pointer'; }} onPointerOut={() => { document.body.style.cursor = 'default'; }}>
       {/* Polaroid Frame */}
       <mesh position={[0, 0, -0.01]}>
         <planeGeometry args={[1.2, 1.5]} />
@@ -80,6 +86,29 @@ export const MemoryNode: React.FC<MemoryNodeProps> = ({ data, index, total, mode
         position={[0, 0.15, 0.01]}
         scale={[1, 1]}
       />
+      
+      {/* Caption text on bottom gray border */}
+      {data.caption && (
+        <>
+          {/* Gray background for caption */}
+          <mesh position={[0, -0.6, 0.015]}>
+            <planeGeometry args={[1.1, 0.15]} />
+            <meshBasicMaterial color="#e5e5e5" transparent opacity={0.9} />
+          </mesh>
+          {/* Caption text */}
+          <Text
+            position={[0, -0.6, 0.02]}
+            fontSize={0.06}
+            color="#333333"
+            anchorX="center"
+            anchorY="middle"
+            maxWidth={1.0}
+            textAlign="center"
+          >
+            {data.caption}
+          </Text>
+        </>
+      )}
       
       {/* Back of the card (Gold) */}
       <mesh position={[0, 0, -0.02]} rotation={[0, Math.PI, 0]}>

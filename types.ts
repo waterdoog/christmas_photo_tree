@@ -4,6 +4,7 @@ export interface PhotoData {
   id: string;
   url: string;
   aspectRatio: number;
+  caption?: string;
 }
 
 // Configuration constants

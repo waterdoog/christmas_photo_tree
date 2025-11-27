@@ -3,23 +3,19 @@ import { v4 as uuidv4 } from 'uuid';
 import { PhotoData } from '../types';
 
 // Get database URL from environment variable
-const DATABASE_URL = import.meta.env.VITE_DATABASE_URL || import.meta.env.DATABASE_URL;
+const DATABASE_URL = (import.meta.env.VITE_DATABASE_URL || import.meta.env.DATABASE_URL) as string | undefined;
 
 if (!DATABASE_URL) {
-  console.warn('DATABASE_URL environment variable is not set');
+  console.error('DATABASE_URL or VITE_DATABASE_URL environment variable is not set');
 }
 
 // Initialize the HTTP SQL client
-const sql = DATABASE_URL ? neon(DATABASE_URL) : null;
+const sql = neon(DATABASE_URL || '');
 
 /**
  * Initializes the database table if it doesn't exist.
  */
 export const initDB = async () => {
-  if (!sql) {
-    console.warn('Database not initialized: DATABASE_URL is not set');
-    return;
-  }
   try {
     await sql`
       CREATE TABLE IF NOT EXISTS photos (
@@ -39,10 +35,6 @@ export const initDB = async () => {
  * Loads all photos from the database.
  */
 export const loadPhotos = async (): Promise<PhotoData[]> => {
-  if (!sql) {
-    console.warn('Database not available: DATABASE_URL is not set');
-    return [];
-  }
   try {
     const rows = await sql`SELECT id, url, aspect_ratio FROM photos ORDER BY created_at DESC`;
     return rows.map(row => ({
@@ -108,10 +100,6 @@ const processImageFile = (file: File): Promise<{ base64: string, aspectRatio: nu
  * Saves a new photo to the database.
  */
 export const savePhoto = async (file: File): Promise<PhotoData | null> => {
-  if (!sql) {
-    console.warn('Database not available: DATABASE_URL is not set');
-    return null;
-  }
   try {
     const { base64, aspectRatio } = await processImageFile(file);
     const id = uuidv4();

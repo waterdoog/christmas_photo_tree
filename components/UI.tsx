@@ -7,9 +7,10 @@ interface UIProps {
   setMode: (mode: DisplayMode) => void;
   onUpload: (files: FileList | null) => void;
   photoCount: number;
+  rotationInputRef: React.MutableRefObject<number>;
 }
 
-export const UI: React.FC<UIProps> = ({ mode, setMode, onUpload, photoCount }) => {
+export const UI: React.FC<UIProps> = ({ mode, setMode, onUpload, photoCount, rotationInputRef }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
@@ -26,7 +27,11 @@ export const UI: React.FC<UIProps> = ({ mode, setMode, onUpload, photoCount }) =
         
         {/* Camera Feed / Hand Tracker Area */}
         <div className="w-40 h-32 pointer-events-auto hidden md:block relative shadow-[0_0_20px_rgba(0,0,0,0.5)]">
-           <HandTracker setMode={setMode} currentMode={mode} />
+           <HandTracker 
+             setMode={setMode} 
+             currentMode={mode} 
+             rotationInputRef={rotationInputRef}
+           />
         </div>
       </div>
 
@@ -38,7 +43,8 @@ export const UI: React.FC<UIProps> = ({ mode, setMode, onUpload, photoCount }) =
            <p>FOLIAGE: 1.5K EMERALD NEEDLES</p>
            <p>LIGHTING: CINEMATIC BLOOM</p>
            <p>STATUS: {mode === 'TREE' ? 'ASSEMBLED' : 'DISPERSED'}</p>
-           <p className="text-yellow-600/70">GESTURE: OPEN (DISPERSE) / FIST (ASSEMBLE)</p>
+           <p className="text-yellow-600/70">GESTURES: OPEN (DISPERSE) / FIST (ASSEMBLE)</p>
+           <p className="text-yellow-600/50">SWIPE HAND LEFT/RIGHT TO ROTATE</p>
         </div>
 
         {/* Action Buttons */}

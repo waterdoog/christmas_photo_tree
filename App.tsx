@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Experience } from './components/Experience';
 import { UI } from './components/UI';
@@ -14,6 +14,10 @@ const DEFAULT_IMAGES = Array.from({ length: 40 }).map((_, i) => ({
 function App() {
   const [photos, setPhotos] = useState<PhotoData[]>(DEFAULT_IMAGES);
   const [mode, setMode] = useState<DisplayMode>('TREE');
+  
+  // Shared ref for rotation velocity from hand tracking
+  // Values: 0 = no input, positive = right, negative = left
+  const rotationInputRef = useRef<number>(0);
 
   const handleUpload = (files: FileList | null) => {
     if (!files) return;
@@ -28,8 +32,6 @@ function App() {
       });
     });
 
-    // If users upload, we replace the defaults or append? Let's replace for a clean slate if uploading many.
-    // Or append if it's just a few. Let's replace to make it personal.
     if (newPhotos.length > 0) {
       setPhotos((prev) => {
           // If we are still on defaults, replace entirely
@@ -56,7 +58,11 @@ function App() {
     <div className="w-full h-full relative bg-black">
       {/* 3D Scene Layer */}
       <div className="absolute inset-0 z-0">
-        <Experience photos={photos} mode={mode} />
+        <Experience 
+            photos={photos} 
+            mode={mode} 
+            rotationInputRef={rotationInputRef}
+        />
       </div>
 
       {/* UI Overlay Layer */}
@@ -65,6 +71,7 @@ function App() {
         setMode={setMode} 
         onUpload={handleUpload}
         photoCount={photos.length}
+        rotationInputRef={rotationInputRef}
       />
     </div>
   );

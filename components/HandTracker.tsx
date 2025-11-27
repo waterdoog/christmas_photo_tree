@@ -5,14 +5,18 @@ import { DisplayMode } from '../types';
 interface HandTrackerProps {
   setMode: (mode: DisplayMode) => void;
   currentMode: DisplayMode;
+  rotationInputRef: React.MutableRefObject<number>;
 }
 
-export const HandTracker: React.FC<HandTrackerProps> = ({ setMode, currentMode }) => {
+export const HandTracker: React.FC<HandTrackerProps> = ({ setMode, currentMode, rotationInputRef }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(true);
   const [detectedGesture, setDetectedGesture] = useState<string>('None');
   const lastGestureTime = useRef<number>(0);
+  
+  // Track previous hand position for velocity
+  const prevCentroidX = useRef<number | null>(null);
 
   // Ref to track current mode without triggering re-initialization effects
   const modeRef = useRef(currentMode);
@@ -90,17 +94,59 @@ export const HandTracker: React.FC<HandTrackerProps> = ({ setMode, currentMode }
           ctx.save();
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           
-          if (results.landmarks) {
+          if (results.landmarks && results.landmarks.length > 0) {
             for (const landmarks of results.landmarks) {
               drawConnectors(ctx, landmarks);
               drawLandmarks(ctx, landmarks);
               detectGesture(landmarks);
+              detectMovement(landmarks);
             }
+          } else {
+             // Reset movement input if no hand detected
+             prevCentroidX.current = null;
+             rotationInputRef.current = 0;
           }
           ctx.restore();
       }
 
       animationFrameId = requestAnimationFrame(predictWebcam);
+    };
+
+    // Calculate movement velocity
+    const detectMovement = (landmarks: any[]) => {
+        // Calculate centroid X (average of all points for stability)
+        let sumX = 0;
+        for (const p of landmarks) sumX += p.x;
+        const currentCentroidX = sumX / landmarks.length;
+
+        if (prevCentroidX.current !== null) {
+            // Calculate delta
+            // Note: Camera is mirrored via CSS scale-x-[-1].
+            // MediaPipe: 0 is Left, 1 is Right (in source).
+            // If I move my hand physically RIGHT:
+            // - In source video, hand moves RIGHT (x increases).
+            // - On mirrored screen, hand moves RIGHT.
+            // So if x increases, we want positive rotation (Right).
+            // However, due to mirroring confusion, let's just test relative delta.
+            
+            // Inverting delta because usually in 3D orbit, rotating "positive" moves camera left (world spins right).
+            // We want natural feeling: Hand Right -> Tree spins Right (Counter Clockwise usually or Clockwise?)
+            // Let's stick to: Move hand Right -> Tree spins Right.
+            
+            const delta = currentCentroidX - prevCentroidX.current;
+            
+            // Apply deadzone and sensitivity
+            if (Math.abs(delta) > 0.002) {
+                 // Invert sign here to match visual direction with orbit controls
+                 // If I move Right (x increases), delta is positive. 
+                 // We send positive to rotationRef.
+                 rotationInputRef.current = -delta * 50; 
+            } else {
+                rotationInputRef.current = 0;
+            }
+        }
+        
+        prevCentroidX.current = currentCentroidX;
     };
 
     // Helper to draw skeleton
@@ -129,20 +175,13 @@ export const HandTracker: React.FC<HandTrackerProps> = ({ setMode, currentMode }
     };
 
     const detectGesture = (landmarks: any[]) => {
-        // Simple logic: Check if fingers are curled or extended
-        // Fingertips: 8 (Index), 12 (Middle), 16 (Ring), 20 (Pinky)
-        // Bases (MCP): 5, 9, 13, 17
-        // Wrist: 0
-
         const wrist = landmarks[0];
         
         const isFingerExtended = (tipIdx: number, baseIdx: number) => {
              const tip = landmarks[tipIdx];
              const base = landmarks[baseIdx];
-             // Distance to wrist
              const distTip = Math.hypot(tip.x - wrist.x, tip.y - wrist.y);
              const distBase = Math.hypot(base.x - wrist.x, base.y - wrist.y);
-             // If tip is significantly further from wrist than base, it's extended
              return distTip > distBase * 1.5; 
         };
 
@@ -153,29 +192,25 @@ export const HandTracker: React.FC<HandTrackerProps> = ({ setMode, currentMode }
 
         const openCount = [indexOpen, middleOpen, ringOpen, pinkyOpen].filter(Boolean).length;
 
-        // Debounce logic
         const now = Date.now();
-        if (now - lastGestureTime.current < 1000) return; // Wait 1s between triggers to avoid spam
+        if (now - lastGestureTime.current < 1000) return; 
 
-        // Read from ref instead of prop to avoid stale closure or dependency issues
         const currentModeValue = modeRef.current;
 
         if (openCount === 4) {
             setDetectedGesture('Open Hand');
             if (currentModeValue !== 'DISPERSED') {
-                console.log("Gesture detected: Open Hand -> Dispersing");
                 setMode('DISPERSED');
                 lastGestureTime.current = now;
             }
         } else if (openCount === 0) {
             setDetectedGesture('Closed Fist');
             if (currentModeValue !== 'TREE') {
-                console.log("Gesture detected: Fist -> Assembling");
                 setMode('TREE');
                 lastGestureTime.current = now;
             }
         } else {
-            setDetectedGesture('None');
+            setDetectedGesture('Tracking...');
         }
     };
 
@@ -188,8 +223,7 @@ export const HandTracker: React.FC<HandTrackerProps> = ({ setMode, currentMode }
           stream.getTracks().forEach(track => track.stop());
       }
     };
-    // Dependency array is now just setMode. currentMode is handled via ref.
-  }, [setMode]); 
+  }, [setMode, rotationInputRef]); 
 
   return (
     <div className="relative w-full h-full bg-black/80 rounded-lg overflow-hidden border border-emerald-500/30">
@@ -210,7 +244,7 @@ export const HandTracker: React.FC<HandTrackerProps> = ({ setMode, currentMode }
         className="absolute inset-0 w-full h-full object-cover transform scale-x-[-1]"
       />
       <div className="absolute bottom-1 left-1 text-[8px] font-mono text-emerald-400 bg-black/50 px-1 rounded">
-         DETECTED: {detectedGesture}
+         {detectedGesture}
       </div>
     </div>
   );

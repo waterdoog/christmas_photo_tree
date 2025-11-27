@@ -31,16 +31,15 @@ export const PhotoDetailModal: React.FC<PhotoDetailModalProps> = ({ photo, onClo
 
   if (!photo) return null;
 
-  // Calculate polaroid dimensions based on photo aspect ratio
-  // Adapt to screen with margins on all sides
+  // Calculate polaroid dimensions - match 3D scene style
+  // Polaroid: gray border (#e5e5e5), photo in center, gray caption area at bottom
   const photoAspectRatio = photo.aspectRatio || 0.8;
   const margin = 40; // margin on all sides
+  const borderPadding = 20; // gray border padding around photo
   const maxWidth = window.innerWidth - margin * 2;
   const maxHeight = window.innerHeight - margin * 2;
   
-  // Calculate dimensions to fit screen
-  // Polaroid structure: white border frame + photo + gray caption area
-  const borderPadding = 20; // white border padding
+  // Calculate photo dimensions to fit screen
   let photoWidth = Math.min(maxWidth * 0.9, 600) - borderPadding * 2;
   let photoHeight = photoWidth / photoAspectRatio;
   
@@ -67,14 +66,14 @@ export const PhotoDetailModal: React.FC<PhotoDetailModalProps> = ({ photo, onClo
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" 
       onClick={handleBackgroundClick}
     >
-      {/* Polaroid-style container - white border frame like 3D preview */}
+      {/* Polaroid-style container - gray border like 3D scene (#e5e5e5) */}
       <div 
         className="relative shadow-2xl"
         style={{ 
           width: `${polaroidWidth}px`,
           height: `${polaroidHeight}px`,
-          backgroundColor: '#fdfdfd', // Polaroid white border color
-          padding: `${borderPadding}px`
+          backgroundColor: '#e5e5e5',
+          padding: `${borderPadding}px ${borderPadding}px 0 ${borderPadding}px`
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -87,7 +86,7 @@ export const PhotoDetailModal: React.FC<PhotoDetailModalProps> = ({ photo, onClo
           ×
         </button>
 
-        {/* Photo */}
+        {/* Photo - centered with gray border around */}
         <div className="w-full" style={{ height: `${photoHeight}px`, overflow: 'hidden' }}>
           <img 
             src={photo.url} 
@@ -97,22 +96,21 @@ export const PhotoDetailModal: React.FC<PhotoDetailModalProps> = ({ photo, onClo
           />
         </div>
 
-        {/* Caption area - bottom gray section, transparent text background */}
+        {/* Caption area - bottom gray section, transparent text background, white handwriting */}
         <div 
           className="flex items-center justify-center px-4"
           style={{ 
             height: `${captionHeight}px`,
-            backgroundColor: '#e5e5e5' // Gray background like 3D preview
+            backgroundColor: '#e5e5e5'
           }}
         >
           {isEditing ? (
             <textarea
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
-              className="w-full border-none outline-none resize-none text-white handwriting text-lg"
+              className="w-full bg-transparent border-none outline-none resize-none text-white handwriting text-lg"
               style={{ 
                 fontFamily: "'Caveat', cursive",
-                backgroundColor: 'transparent', // Transparent background
                 minHeight: '40px',
                 lineHeight: '1.4',
                 color: '#ffffff'
@@ -132,7 +130,6 @@ export const PhotoDetailModal: React.FC<PhotoDetailModalProps> = ({ photo, onClo
               className="w-full text-center cursor-text handwriting text-white"
               style={{ 
                 fontFamily: "'Caveat', cursive",
-                backgroundColor: 'transparent', // Transparent background
                 fontSize: '24px',
                 minHeight: '40px',
                 lineHeight: '1.4',

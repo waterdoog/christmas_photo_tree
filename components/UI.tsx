@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { DisplayMode } from '../types';
 import { HandTracker } from './HandTracker';
 
@@ -15,41 +15,55 @@ export const UI: React.FC<UIProps> = ({ mode, setMode, onUpload, photoCount, rot
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  // Drag and Drop Handlers
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
+  // Use document-level drag listeners to avoid blocking clicks
+  useEffect(() => {
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      setIsDragging(true);
+    };
 
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
+    const handleDragLeave = (e: DragEvent) => {
+      e.preventDefault();
+      // Only hide if leaving the window
+      if (e.clientX === 0 && e.clientY === 0) {
+        setIsDragging(false);
+      }
+    };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      onUpload(e.dataTransfer.files);
-    }
-  };
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+      if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+        onUpload(e.dataTransfer.files);
+      }
+    };
+
+    document.addEventListener('dragover', handleDragOver);
+    document.addEventListener('dragleave', handleDragLeave);
+    document.addEventListener('drop', handleDrop);
+
+    return () => {
+      document.removeEventListener('dragover', handleDragOver);
+      document.removeEventListener('dragleave', handleDragLeave);
+      document.removeEventListener('drop', handleDrop);
+    };
+  }, [onUpload]);
 
   return (
-    <div 
-      className={`absolute inset-0 z-10 flex flex-col justify-between p-6 text-white font-sans transition-colors duration-300 ${isDragging ? 'bg-emerald-900/30 backdrop-blur-sm' : ''}`}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-    >
-      
-      {/* Full screen drop overlay */}
+    <>
+      {/* Drag overlay - only visible when dragging, doesn't block clicks when hidden */}
       {isDragging && (
-        <div className="absolute inset-0 flex items-center justify-center z-50 border-4 border-dashed border-emerald-400 m-8 rounded-3xl pointer-events-none">
-          <div className="bg-black/80 px-8 py-4 rounded-xl text-emerald-400 font-bold text-2xl tracking-widest uppercase shadow-[0_0_50px_rgba(16,185,129,0.5)]">
-            Drop Memories Here
+        <div className="absolute inset-0 z-10 bg-emerald-900/30 backdrop-blur-sm pointer-events-none">
+          <div className="absolute inset-0 flex items-center justify-center border-4 border-dashed border-emerald-400 m-8 rounded-3xl">
+            <div className="bg-black/80 px-8 py-4 rounded-xl text-emerald-400 font-bold text-2xl tracking-widest uppercase shadow-[0_0_50px_rgba(16,185,129,0.5)]">
+              Drop Memories Here
+            </div>
           </div>
         </div>
       )}
+      
+      {/* UI Layer - pointer-events-none by default, only interactive elements have pointer-events-auto */}
+      <div className="absolute inset-0 z-10 flex flex-col justify-between p-6 text-white font-sans pointer-events-none">
 
       {/* Header */}
       <div className="flex justify-between items-start pointer-events-none">
@@ -120,6 +134,7 @@ export const UI: React.FC<UIProps> = ({ mode, setMode, onUpload, photoCount, rot
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };

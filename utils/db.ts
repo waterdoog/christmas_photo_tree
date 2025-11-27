@@ -7,14 +7,17 @@ import { PhotoData } from '../types';
 let DATABASE_URL = (import.meta.env.VITE_DATABASE_URL || import.meta.env.DATABASE_URL || 'postgresql://neondb_owner:npg_Ze0yU8GdlCxb@ep-long-heart-ab9b1fqo-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require') as string;
 
 // Clean up the URL if it has unwanted prefixes/suffixes (e.g., from Vercel copy-paste)
-if (DATABASE_URL.startsWith('psql_')) {
-  DATABASE_URL = DATABASE_URL.replace(/^psql_/, '');
-}
-if (DATABASE_URL.startsWith("'") || DATABASE_URL.startsWith('"')) {
-  DATABASE_URL = DATABASE_URL.slice(1);
-}
-if (DATABASE_URL.endsWith("'") || DATABASE_URL.endsWith('"')) {
-  DATABASE_URL = DATABASE_URL.slice(0, -1);
+// Remove common prefixes like "psql", "psql_", etc.
+DATABASE_URL = DATABASE_URL.replace(/^psql[\s_']*/i, '');
+// Remove quotes from start and end
+DATABASE_URL = DATABASE_URL.replace(/^['"]+|['"]+$/g, '');
+// Remove any leading/trailing whitespace
+DATABASE_URL = DATABASE_URL.trim();
+// Remove channel_binding parameter as it may cause issues with Neon serverless
+if (DATABASE_URL.includes('channel_binding=')) {
+  DATABASE_URL = DATABASE_URL.replace(/[&?]channel_binding=[^&]*/g, '');
+  // Clean up any double ? or & 
+  DATABASE_URL = DATABASE_URL.replace(/\?&/, '?').replace(/&&/g, '&').replace(/&$/, '');
 }
 
 // Debug logging - always log in production to help diagnose issues

@@ -1,0 +1,7 @@
+{
+  "name": "Emerald Memory Tree",
+  "description": "A high-fidelity 3D Christmas tree experience where memories float as polaroids. Features cinematic lighting, batch photo import, and interactive formation modes.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

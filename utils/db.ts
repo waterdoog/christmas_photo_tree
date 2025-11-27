@@ -47,15 +47,58 @@ try {
 }
 
 // Debug logging - always log in production to help diagnose issues
-console.log('🔍 Database URL configured:', DATABASE_URL ? `Yes (length: ${DATABASE_URL.length}, starts with: ${DATABASE_URL.substring(0, 20)}...)` : 'No');
+console.log('🔍 Database URL configured:', DATABASE_URL ? `Yes (length: ${DATABASE_URL.length})` : 'No');
+console.log('🔍 Database URL (first 80 chars):', DATABASE_URL ? DATABASE_URL.substring(0, 80) + '...' : 'NOT SET');
 console.log('🔍 Environment variables:', {
   hasVITE_DATABASE_URL: !!import.meta.env.VITE_DATABASE_URL,
   hasDATABASE_URL: !!import.meta.env.DATABASE_URL,
   mode: import.meta.env.MODE
 });
 
-// Initialize the HTTP SQL client
-const sql = neon(DATABASE_URL);
+// Validate URL can be parsed before passing to neon()
+let isValidUrl = false;
+try {
+  const testUrl = new URL(DATABASE_URL);
+  isValidUrl = true;
+  console.log('✅ URL parsing test passed:', {
+    protocol: testUrl.protocol,
+    host: testUrl.host,
+    pathname: testUrl.pathname,
+    hasUsername: !!testUrl.username,
+    hasPassword: !!testUrl.password
+  });
+} catch (e) {
+  console.error('❌ URL parsing test failed:', e);
+  // Use fallback URL
+  DATABASE_URL = 'postgresql://neondb_owner:npg_Ze0yU8GdlCxb@ep-long-heart-ab9b1fqo-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require';
+  console.log('🔄 Using fallback URL');
+}
+
+// Ensure URL encoding is correct - encode special characters in password
+try {
+  const url = new URL(DATABASE_URL);
+  // Re-encode username and password to ensure special characters are handled
+  const encodedUsername = encodeURIComponent(url.username);
+  const encodedPassword = encodeURIComponent(url.password);
+  // Reconstruct URL with properly encoded credentials
+  DATABASE_URL = `${url.protocol}//${encodedUsername}:${encodedPassword}@${url.host}${url.pathname}${url.search}`;
+  console.log('✅ URL credentials encoded');
+} catch (e) {
+  console.warn('⚠️ URL encoding step failed, using URL as-is:', e);
+}
+
+// Initialize the HTTP SQL client with error handling
+let sql;
+try {
+  sql = neon(DATABASE_URL);
+  console.log('✅ Neon client initialized');
+} catch (e) {
+  console.error('❌ Failed to initialize Neon client:', e);
+  // Try with fallback URL
+  const fallbackUrl = 'postgresql://neondb_owner:npg_Ze0yU8GdlCxb@ep-long-heart-ab9b1fqo-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require';
+  sql = neon(fallbackUrl);
+  console.log('🔄 Using fallback URL for Neon client');
+}
 
 /**
  * Initializes the database table if it doesn't exist.

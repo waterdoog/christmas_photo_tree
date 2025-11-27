@@ -95,7 +95,7 @@ export const MemoryNode: React.FC<MemoryNodeProps> = ({ data, index, total, mode
             <planeGeometry args={[1.1, 0.15]} />
             <meshBasicMaterial color="#e5e5e5" transparent opacity={0.9} />
           </mesh>
-          {/* Caption text - white handwriting font */}
+          {/* Caption text - white text on gray background */}
           <Text
             position={[0, -0.6, 0.02]}
             fontSize={0.06}
@@ -104,7 +104,6 @@ export const MemoryNode: React.FC<MemoryNodeProps> = ({ data, index, total, mode
             anchorY="middle"
             maxWidth={1.0}
             textAlign="center"
-            font="https://fonts.gstatic.com/s/caveat/v18/WnznHAc5bAfYB2QRah7pcpNvOx-pjfJ9eIup.woff2"
           >
             {data.caption}
           </Text>

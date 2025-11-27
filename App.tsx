@@ -5,8 +5,8 @@ import { UI } from './components/UI';
 import { PhotoData, DisplayMode } from './types';
 import { initDB, loadPhotos, savePhoto } from './utils/db';
 
-// Fallback images if DB is empty
-const DEFAULT_IMAGES = Array.from({ length: 40 }).map((_, i) => ({
+// Fallback images if DB is empty - Increased to 150 for density
+const DEFAULT_IMAGES = Array.from({ length: 150 }).map((_, i) => ({
   id: uuidv4(),
   url: `https://picsum.photos/seed/${i + 100}/400/500`,
   aspectRatio: 0.8

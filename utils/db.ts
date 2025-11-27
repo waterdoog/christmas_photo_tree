@@ -2,102 +2,22 @@ import { neon } from '@neondatabase/serverless';
 import { v4 as uuidv4 } from 'uuid';
 import { PhotoData } from '../types';
 
-// Get database URL from environment variable, fallback to hardcoded for development
+// Get database URL from environment variable
 // Note: In Vite, only VITE_* env vars are exposed to client code
-let DATABASE_URL = (import.meta.env.VITE_DATABASE_URL || import.meta.env.DATABASE_URL || 'postgresql://neondb_owner:npg_Ze0yU8GdlCxb@ep-long-heart-ab9b1fqo-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require') as string;
+const DATABASE_URL = import.meta.env.VITE_DATABASE_URL as string;
 
-// Clean up the URL if it has unwanted prefixes/suffixes (e.g., from Vercel copy-paste)
-// Remove common prefixes like "psql", "psql_", etc.
-DATABASE_URL = DATABASE_URL.replace(/^psql[\s_']*/i, '');
-// Remove quotes from start and end
-DATABASE_URL = DATABASE_URL.replace(/^['"]+|['"]+$/g, '');
-// Remove any leading/trailing whitespace
-DATABASE_URL = DATABASE_URL.trim();
-// Remove channel_binding parameter as it may cause issues with Neon serverless
-if (DATABASE_URL.includes('channel_binding=')) {
-  DATABASE_URL = DATABASE_URL.replace(/[&?]channel_binding=[^&]*/g, '');
-  // Clean up any double ? or & 
-  DATABASE_URL = DATABASE_URL.replace(/\?&/, '?').replace(/&&/g, '&').replace(/&$/, '');
+if (!DATABASE_URL) {
+  console.error('❌ VITE_DATABASE_URL environment variable is not set');
 }
-
-// Validate and normalize URL format
-try {
-  // Try to parse the URL to validate it
-  const url = new URL(DATABASE_URL);
-  
-  // Reconstruct a clean URL with only necessary parameters
-  const cleanParams = new URLSearchParams();
-  if (url.searchParams.has('sslmode')) {
-    cleanParams.set('sslmode', url.searchParams.get('sslmode') || 'require');
-  } else {
-    cleanParams.set('sslmode', 'require');
-  }
-  
-  // Reconstruct URL
-  DATABASE_URL = `${url.protocol}//${url.username}:${url.password}@${url.host}${url.pathname}?${cleanParams.toString()}`;
-  console.log('✅ URL validated and normalized');
-} catch (e) {
-  console.warn('⚠️ URL validation failed, using cleaned URL as-is:', e);
-  // If URL parsing fails, at least ensure it starts with postgresql://
-  if (!DATABASE_URL.startsWith('postgresql://')) {
-    console.error('❌ Invalid database URL format');
-    // Fallback to hardcoded URL if current one is invalid
-    DATABASE_URL = 'postgresql://neondb_owner:npg_Ze0yU8GdlCxb@ep-long-heart-ab9b1fqo-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require';
-  }
-}
-
-// Debug logging - always log in production to help diagnose issues
-console.log('🔍 Database URL configured:', DATABASE_URL ? `Yes (length: ${DATABASE_URL.length})` : 'No');
-console.log('🔍 Database URL (first 80 chars):', DATABASE_URL ? DATABASE_URL.substring(0, 80) + '...' : 'NOT SET');
-console.log('🔍 Environment variables:', {
-  hasVITE_DATABASE_URL: !!import.meta.env.VITE_DATABASE_URL,
-  hasDATABASE_URL: !!import.meta.env.DATABASE_URL,
-  mode: import.meta.env.MODE
-});
-
-// Validate URL can be parsed before passing to neon()
-let isValidUrl = false;
-try {
-  const testUrl = new URL(DATABASE_URL);
-  isValidUrl = true;
-  console.log('✅ URL parsing test passed:', {
-    protocol: testUrl.protocol,
-    host: testUrl.host,
-    pathname: testUrl.pathname,
-    hasUsername: !!testUrl.username,
-    hasPassword: !!testUrl.password
-  });
-} catch (e) {
-  console.error('❌ URL parsing test failed:', e);
-  // Use fallback URL
-  DATABASE_URL = 'postgresql://neondb_owner:npg_Ze0yU8GdlCxb@ep-long-heart-ab9b1fqo-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require';
-  console.log('🔄 Using fallback URL');
-}
-
-// Use hardcoded URL directly to avoid any encoding/formatting issues
-// This ensures we're using the exact format that works
-const FALLBACK_URL = 'postgresql://neondb_owner:npg_Ze0yU8GdlCxb@ep-long-heart-ab9b1fqo-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require';
-
-// For now, use the hardcoded URL to ensure it works
-// TODO: Once working, we can switch back to using environment variables
-let finalDatabaseUrl = FALLBACK_URL;
-
-console.log('🔍 Using database URL (length):', finalDatabaseUrl.length);
 
 // Initialize the HTTP SQL client
-// Use hardcoded URL to avoid any encoding issues
-// Version 1.0.2 should have better browser support
-let sql = neon(FALLBACK_URL);
-console.log('✅ Neon client initialized (v1.0.2)');
+const sql = neon(DATABASE_URL);
 
 /**
  * Initializes the database table if it doesn't exist.
  */
 export const initDB = async () => {
   try {
-    // Add a simple test query first to verify connection
-    await sql`SELECT 1 as test`;
-    
     await sql`
       CREATE TABLE IF NOT EXISTS photos (
         id TEXT PRIMARY KEY,
@@ -109,12 +29,7 @@ export const initDB = async () => {
     console.log('✅ Database initialized successfully');
   } catch (error) {
     console.error('❌ Failed to init DB:', error);
-    console.error('Database URL used:', DATABASE_URL ? DATABASE_URL.substring(0, 50) + '...' : 'NOT SET');
-    if (error instanceof Error) {
-      console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
-    }
-    throw error; // Re-throw to let caller know it failed
+    throw error;
   }
 };
 
@@ -132,7 +47,6 @@ export const loadPhotos = async (): Promise<PhotoData[]> => {
     }));
   } catch (error) {
     console.error('❌ Failed to load photos:', error);
-    console.error('Error details:', error instanceof Error ? error.message : String(error));
     return [];
   }
 };

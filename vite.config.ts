@@ -13,10 +13,7 @@ export default defineConfig(({ mode }) => {
       plugins: [react()],
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        // Expose DATABASE_URL to client code (Vite only exposes VITE_* by default)
-        'import.meta.env.VITE_DATABASE_URL': JSON.stringify(env.VITE_DATABASE_URL || env.DATABASE_URL),
-        'import.meta.env.DATABASE_URL': JSON.stringify(env.VITE_DATABASE_URL || env.DATABASE_URL)
+        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
       },
       resolve: {
         alias: {

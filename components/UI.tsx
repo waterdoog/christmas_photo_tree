@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { DisplayMode } from '../types';
+import { HandTracker } from './HandTracker';
 
 interface UIProps {
   mode: DisplayMode;
@@ -23,12 +24,9 @@ export const UI: React.FC<UIProps> = ({ mode, setMode, onUpload, photoCount }) =
           </div>
         </div>
         
-        {/* Simple Camera Feed Visual (Static representation based on user request context) */}
-        <div className="w-32 h-24 border border-emerald-800 bg-black/50 rounded-lg overflow-hidden relative hidden md:block">
-           <div className="absolute inset-0 flex items-center justify-center text-[10px] text-emerald-500/50">
-             CAMERA FEED
-           </div>
-           <div className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+        {/* Camera Feed / Hand Tracker Area */}
+        <div className="w-40 h-32 pointer-events-auto hidden md:block relative shadow-[0_0_20px_rgba(0,0,0,0.5)]">
+           <HandTracker setMode={setMode} currentMode={mode} />
         </div>
       </div>
 
@@ -40,6 +38,7 @@ export const UI: React.FC<UIProps> = ({ mode, setMode, onUpload, photoCount }) =
            <p>FOLIAGE: 1.5K EMERALD NEEDLES</p>
            <p>LIGHTING: CINEMATIC BLOOM</p>
            <p>STATUS: {mode === 'TREE' ? 'ASSEMBLED' : 'DISPERSED'}</p>
+           <p className="text-yellow-600/70">GESTURE: OPEN (DISPERSE) / FIST (ASSEMBLE)</p>
         </div>
 
         {/* Action Buttons */}

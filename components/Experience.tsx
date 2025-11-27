@@ -1,6 +1,6 @@
 import React from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Stars, Environment, Sparkles } from '@react-three/drei';
+import { OrbitControls, Stars, Sparkles } from '@react-three/drei';
 import { EffectComposer, Bloom, Noise, Vignette } from '@react-three/postprocessing';
 import { BlendFunction } from 'postprocessing';
 import { PhotoData, DisplayMode } from '../types';
@@ -24,7 +24,8 @@ export const Experience: React.FC<ExperienceProps> = ({ photos, mode }) => {
       
       {/* Environmental Lighting */}
       <ambientLight intensity={0.2} />
-      <pointLight position={[10, 10, 10]} intensity={1} color="#emerald" />
+      {/* Fixed: Use hex instead of named color for emerald */}
+      <pointLight position={[10, 10, 10]} intensity={1} color="#10b981" />
       <pointLight position={[-10, -5, -10]} intensity={0.5} color="#004d40" />
 
       {/* Main Content */}

@@ -24,13 +24,31 @@ function App() {
   // Initialize DB and load photos on mount
   useEffect(() => {
     const setup = async () => {
-      await initDB();
-      const savedPhotos = await loadPhotos();
-      
-      if (savedPhotos.length > 0) {
-        setPhotos(savedPhotos);
+      try {
+        // Add timeout to prevent infinite loading
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Database connection timeout')), 10000)
+        );
+        
+        // Race between init and timeout
+        await Promise.race([
+          initDB(),
+          timeoutPromise
+        ]);
+        
+        const savedPhotos = await loadPhotos();
+        
+        if (savedPhotos.length > 0) {
+          setPhotos(savedPhotos);
+        }
+      } catch (error) {
+        console.error('Database setup failed:', error);
+        // Continue with default images even if DB fails
+        // This ensures the app doesn't get stuck
+      } finally {
+        // Always set initialized to true, even if DB connection failed
+        setDbInitialized(true);
       }
-      setDbInitialized(true);
     };
     setup();
   }, []);

@@ -17,10 +17,13 @@ if (DATABASE_URL.endsWith("'") || DATABASE_URL.endsWith('"')) {
   DATABASE_URL = DATABASE_URL.slice(0, -1);
 }
 
-// Debug logging (remove in production if needed)
-if (import.meta.env.DEV) {
-  console.log('Database URL configured:', DATABASE_URL ? 'Yes (length: ' + DATABASE_URL.length + ')' : 'No');
-}
+// Debug logging - always log in production to help diagnose issues
+console.log('🔍 Database URL configured:', DATABASE_URL ? `Yes (length: ${DATABASE_URL.length}, starts with: ${DATABASE_URL.substring(0, 20)}...)` : 'No');
+console.log('🔍 Environment variables:', {
+  hasVITE_DATABASE_URL: !!import.meta.env.VITE_DATABASE_URL,
+  hasDATABASE_URL: !!import.meta.env.DATABASE_URL,
+  mode: import.meta.env.MODE
+});
 
 // Initialize the HTTP SQL client
 const sql = neon(DATABASE_URL);
@@ -30,6 +33,9 @@ const sql = neon(DATABASE_URL);
  */
 export const initDB = async () => {
   try {
+    // Add a simple test query first to verify connection
+    await sql`SELECT 1 as test`;
+    
     await sql`
       CREATE TABLE IF NOT EXISTS photos (
         id TEXT PRIMARY KEY,
@@ -41,7 +47,11 @@ export const initDB = async () => {
     console.log('✅ Database initialized successfully');
   } catch (error) {
     console.error('❌ Failed to init DB:', error);
-    console.error('Database URL used:', DATABASE_URL.substring(0, 50) + '...');
+    console.error('Database URL used:', DATABASE_URL ? DATABASE_URL.substring(0, 50) + '...' : 'NOT SET');
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
     throw error; // Re-throw to let caller know it failed
   }
 };

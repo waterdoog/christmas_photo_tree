@@ -15,8 +15,8 @@ export const HandTracker: React.FC<HandTrackerProps> = ({ setMode, currentMode, 
   const [detectedGesture, setDetectedGesture] = useState<string>('None');
   const lastGestureTime = useRef<number>(0);
   
-  // Track previous hand position for velocity
-  const prevCentroidX = useRef<number | null>(null);
+  // Track previous hand rotation angle
+  const prevRotationAngle = useRef<number | null>(null);
 
   // Ref to track current mode without triggering re-initialization effects
   const modeRef = useRef(currentMode);
@@ -99,11 +99,11 @@ export const HandTracker: React.FC<HandTrackerProps> = ({ setMode, currentMode, 
               drawConnectors(ctx, landmarks);
               drawLandmarks(ctx, landmarks);
               detectGesture(landmarks);
-              detectMovement(landmarks);
+              detectRotation(landmarks);
             }
           } else {
-             // Reset movement input if no hand detected
-             prevCentroidX.current = null;
+             // Reset rotation input if no hand detected
+             prevRotationAngle.current = null;
              rotationInputRef.current = 0;
           }
           ctx.restore();
@@ -112,41 +112,36 @@ export const HandTracker: React.FC<HandTrackerProps> = ({ setMode, currentMode, 
       animationFrameId = requestAnimationFrame(predictWebcam);
     };
 
-    // Calculate movement velocity
-    const detectMovement = (landmarks: any[]) => {
-        // Calculate centroid X (average of all points for stability)
-        let sumX = 0;
-        for (const p of landmarks) sumX += p.x;
-        const currentCentroidX = sumX / landmarks.length;
+    // Calculate hand rotation angle
+    const detectRotation = (landmarks: any[]) => {
+        // Use wrist (0) and middle finger tip (12) to calculate hand direction
+        const wrist = landmarks[0];
+        const middleFingerTip = landmarks[12];
+        
+        // Calculate angle from wrist to middle finger tip
+        // This represents the hand's rotation/direction
+        const dx = middleFingerTip.x - wrist.x;
+        const dy = middleFingerTip.y - wrist.y;
+        const currentRotationAngle = Math.atan2(dy, dx);
 
-        if (prevCentroidX.current !== null) {
-            // Calculate delta
-            // Note: Camera is mirrored via CSS scale-x-[-1].
-            // MediaPipe: 0 is Left, 1 is Right (in source).
-            // If I move my hand physically RIGHT:
-            // - In source video, hand moves RIGHT (x increases).
-            // - On mirrored screen, hand moves RIGHT.
-            // So if x increases, we want positive rotation (Right).
-            // However, due to mirroring confusion, let's just test relative delta.
+        if (prevRotationAngle.current !== null) {
+            // Calculate angular delta
+            let delta = currentRotationAngle - prevRotationAngle.current;
             
-            // Inverting delta because usually in 3D orbit, rotating "positive" moves camera left (world spins right).
-            // We want natural feeling: Hand Right -> Tree spins Right (Counter Clockwise usually or Clockwise?)
-            // Let's stick to: Move hand Right -> Tree spins Right.
-            
-            const delta = currentCentroidX - prevCentroidX.current;
+            // Normalize to [-PI, PI] range
+            if (delta > Math.PI) delta -= 2 * Math.PI;
+            if (delta < -Math.PI) delta += 2 * Math.PI;
             
             // Apply deadzone and sensitivity
-            if (Math.abs(delta) > 0.002) {
-                 // Invert sign here to match visual direction with orbit controls
-                 // If I move Right (x increases), delta is positive. 
-                 // We send positive to rotationRef.
-                 rotationInputRef.current = -delta * 50; 
+            if (Math.abs(delta) > 0.05) {
+                // Invert sign to match visual direction
+                rotationInputRef.current = -delta * 30;
             } else {
                 rotationInputRef.current = 0;
             }
         }
         
-        prevCentroidX.current = currentCentroidX;
+        prevRotationAngle.current = currentRotationAngle;
     };
 
     // Helper to draw skeleton

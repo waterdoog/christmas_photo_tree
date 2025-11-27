@@ -25,9 +25,9 @@ function App() {
   useEffect(() => {
     const setup = async () => {
       try {
-        // Add timeout to prevent infinite loading
+        // Add timeout to prevent infinite loading (longer for localhost)
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Database connection timeout')), 10000)
+          setTimeout(() => reject(new Error('Database connection timeout')), 5000)
         );
         
         // Race between init and timeout

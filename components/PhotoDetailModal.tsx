@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PhotoData } from '../types';
 import { updatePhotoCaption } from '../utils/db';
 
@@ -11,25 +11,13 @@ interface PhotoDetailModalProps {
 export const PhotoDetailModal: React.FC<PhotoDetailModalProps> = ({ photo, onClose, onUpdate }) => {
   const [caption, setCaption] = useState('');
   const [isEditing, setIsEditing] = useState(false);
-  const [useVoice, setUseVoice] = useState(false);
-  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     if (photo) {
       setCaption(photo.caption || '');
       setIsEditing(false);
-      setUseVoice(false);
     }
   }, [photo]);
-
-  useEffect(() => {
-    // Cleanup speech recognition on unmount
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-    };
-  }, []);
 
   const handleSave = async () => {
     if (!photo) return;
@@ -41,127 +29,97 @@ export const PhotoDetailModal: React.FC<PhotoDetailModalProps> = ({ photo, onClo
     }
   };
 
-  const startVoiceRecognition = () => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      alert('Speech recognition not supported in this browser');
-      return;
-    }
-
-    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = 'en-US';
-
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      setCaption(prev => prev + (prev ? ' ' : '') + transcript);
-      setUseVoice(false);
-    };
-
-    recognition.onerror = (event: any) => {
-      console.error('Speech recognition error:', event.error);
-      setUseVoice(false);
-    };
-
-    recognition.onend = () => {
-      setUseVoice(false);
-    };
-
-    recognitionRef.current = recognition;
-    recognition.start();
-    setUseVoice(true);
-  };
-
-  const stopVoiceRecognition = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      setUseVoice(false);
-    }
-  };
-
   if (!photo) return null;
 
+  // Calculate polaroid dimensions based on photo aspect ratio
+  // Polaroid ratio: ~0.8 (width:height), photo takes ~80% of height, caption area ~20%
+  const photoAspectRatio = photo.aspectRatio || 0.8;
+  const maxWidth = Math.min(600, window.innerWidth * 0.9);
+  const photoWidth = maxWidth * 0.9;
+  const photoHeight = photoWidth / photoAspectRatio;
+  const captionHeight = 80;
+  const polaroidHeight = photoHeight + captionHeight;
+  const polaroidWidth = photoWidth + 40; // padding
+
+  const handleBackgroundClick = async () => {
+    // Save if editing before closing
+    if (isEditing && photo) {
+      await handleSave();
+    }
+    onClose();
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={onClose}>
-      <div className="relative bg-[#010b07] border border-emerald-500/30 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        {/* Close button */}
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" 
+      onClick={handleBackgroundClick}
+    >
+      {/* Polaroid-style container */}
+      <div 
+        className="relative bg-white shadow-2xl"
+        style={{ 
+          width: `${polaroidWidth}px`,
+          height: `${polaroidHeight}px`,
+          padding: '20px 20px 0 20px'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close button - subtle */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-emerald-400 hover:text-emerald-300 text-2xl w-8 h-8 flex items-center justify-center"
+          className="absolute -top-2 -right-2 w-8 h-8 bg-black/60 hover:bg-black/80 rounded-full text-white text-xl flex items-center justify-center transition-colors"
+          style={{ fontSize: '20px', lineHeight: '1' }}
         >
           ×
         </button>
 
         {/* Photo */}
-        <div className="mb-4">
-          <img src={photo.url} alt="Photo" className="w-full h-auto rounded" />
+        <div className="w-full" style={{ height: `${photoHeight}px`, overflow: 'hidden' }}>
+          <img 
+            src={photo.url} 
+            alt="Photo" 
+            className="w-full h-full object-cover"
+            style={{ objectFit: 'cover' }}
+          />
         </div>
 
-        {/* Caption section */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-sm text-emerald-400 uppercase tracking-widest">Caption</label>
-            <div className="flex gap-2">
-              {!isEditing && (
-                <>
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="text-xs text-emerald-400 hover:text-emerald-300 px-2 py-1 border border-emerald-500/30 rounded"
-                  >
-                    Edit
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-
+        {/* Caption area - bottom gray section, always editable */}
+        <div 
+          className="bg-gray-200 flex items-center justify-center px-4"
+          style={{ height: `${captionHeight}px` }}
+        >
           {isEditing ? (
-            <div className="space-y-2">
-              <textarea
-                value={caption}
-                onChange={(e) => setCaption(e.target.value)}
-                className="w-full bg-black/50 border border-emerald-500/30 rounded p-2 text-white text-sm focus:outline-none focus:border-emerald-500"
-                rows={3}
-                placeholder="Type your caption here or use voice recognition..."
-                autoFocus
-              />
-              <div className="flex gap-2">
-                <button
-                  onClick={useVoice ? stopVoiceRecognition : startVoiceRecognition}
-                  className={`px-3 py-1 text-xs border rounded ${
-                    useVoice 
-                      ? 'bg-red-500/20 text-red-400 border-red-500/30' 
-                      : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                  } hover:opacity-80`}
-                >
-                  {useVoice ? 'Stop Voice' : 'Voice'}
-                </button>
-                <button
-                  onClick={handleSave}
-                  className="px-4 py-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded hover:bg-emerald-500/30"
-                >
-                  Save
-                </button>
-                <button
-                  onClick={() => {
-                    setIsEditing(false);
-                    setUseVoice(false);
-                    setCaption(photo.caption || '');
-                  }}
-                  className="px-4 py-2 bg-black/50 text-white border border-gray-500/30 rounded hover:bg-black/70"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
+            <textarea
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              className="w-full bg-transparent border-none outline-none resize-none text-gray-800 handwriting text-lg"
+              style={{ 
+                fontFamily: "'Caveat', cursive",
+                minHeight: '40px',
+                lineHeight: '1.4'
+              }}
+              placeholder="Write your memory..."
+              autoFocus
+              rows={2}
+              onBlur={handleSave}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                  handleSave();
+                }
+              }}
+            />
           ) : (
-            <div className="bg-black/50 border border-emerald-500/30 rounded p-3 min-h-[3rem]">
-              {caption ? (
-                <p className="text-white text-sm">{caption}</p>
-              ) : (
-                <p className="text-gray-500 text-sm italic">No caption yet. Click Edit to add one.</p>
-              )}
+            <div 
+              className="w-full text-center cursor-text handwriting text-gray-800"
+              style={{ 
+                fontFamily: "'Caveat', cursive",
+                fontSize: '24px',
+                minHeight: '40px',
+                lineHeight: '1.4'
+              }}
+              onClick={() => setIsEditing(true)}
+            >
+              {caption || <span className="text-gray-400 italic">Tap to write...</span>}
             </div>
           )}
         </div>

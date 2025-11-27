@@ -3,7 +3,24 @@ import { v4 as uuidv4 } from 'uuid';
 import { PhotoData } from '../types';
 
 // Get database URL from environment variable, fallback to hardcoded for development
-const DATABASE_URL = (import.meta.env.VITE_DATABASE_URL || import.meta.env.DATABASE_URL || 'postgresql://neondb_owner:npg_Ze0yU8GdlCxb@ep-long-heart-ab9b1fqo-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require') as string;
+// Note: In Vite, only VITE_* env vars are exposed to client code
+let DATABASE_URL = (import.meta.env.VITE_DATABASE_URL || import.meta.env.DATABASE_URL || 'postgresql://neondb_owner:npg_Ze0yU8GdlCxb@ep-long-heart-ab9b1fqo-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require') as string;
+
+// Clean up the URL if it has unwanted prefixes/suffixes (e.g., from Vercel copy-paste)
+if (DATABASE_URL.startsWith('psql_')) {
+  DATABASE_URL = DATABASE_URL.replace(/^psql_/, '');
+}
+if (DATABASE_URL.startsWith("'") || DATABASE_URL.startsWith('"')) {
+  DATABASE_URL = DATABASE_URL.slice(1);
+}
+if (DATABASE_URL.endsWith("'") || DATABASE_URL.endsWith('"')) {
+  DATABASE_URL = DATABASE_URL.slice(0, -1);
+}
+
+// Debug logging (remove in production if needed)
+if (import.meta.env.DEV) {
+  console.log('Database URL configured:', DATABASE_URL ? 'Yes (length: ' + DATABASE_URL.length + ')' : 'No');
+}
 
 // Initialize the HTTP SQL client
 const sql = neon(DATABASE_URL);
@@ -21,9 +38,11 @@ export const initDB = async () => {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `;
-    console.log('Database initialized');
+    console.log('✅ Database initialized successfully');
   } catch (error) {
-    console.error('Failed to init DB:', error);
+    console.error('❌ Failed to init DB:', error);
+    console.error('Database URL used:', DATABASE_URL.substring(0, 50) + '...');
+    throw error; // Re-throw to let caller know it failed
   }
 };
 
@@ -33,13 +52,15 @@ export const initDB = async () => {
 export const loadPhotos = async (): Promise<PhotoData[]> => {
   try {
     const rows = await sql`SELECT id, url, aspect_ratio FROM photos ORDER BY created_at DESC`;
+    console.log(`✅ Loaded ${rows.length} photos from database`);
     return rows.map(row => ({
       id: row.id,
       url: row.url,
       aspectRatio: row.aspect_ratio
     }));
   } catch (error) {
-    console.error('Failed to load photos:', error);
+    console.error('❌ Failed to load photos:', error);
+    console.error('Error details:', error instanceof Error ? error.message : String(error));
     return [];
   }
 };

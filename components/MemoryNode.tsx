@@ -87,27 +87,21 @@ export const MemoryNode: React.FC<MemoryNodeProps> = ({ data, index, total, mode
         scale={[1, 1]}
       />
       
-      {/* Caption text on bottom gray border */}
+      {/* Caption text floats directly on the polaroid now */}
       {data.caption && (
-        <>
-          {/* Gray background for caption */}
-          <mesh position={[0, -0.6, 0.015]}>
-            <planeGeometry args={[1.1, 0.15]} />
-            <meshBasicMaterial color="#e5e5e5" transparent opacity={0.9} />
-          </mesh>
-          {/* Caption text - white text on gray background */}
-          <Text
-            position={[0, -0.6, 0.02]}
-            fontSize={0.06}
-            color="#ffffff"
-            anchorX="center"
-            anchorY="middle"
-            maxWidth={1.0}
-            textAlign="center"
-          >
-            {data.caption}
-          </Text>
-        </>
+        <Text
+          position={[0, -0.6, 0.02]}
+          fontSize={0.06}
+          color="#ffffff"
+          anchorX="center"
+          anchorY="middle"
+          maxWidth={1.0}
+          textAlign="center"
+          outlineWidth={0.002}
+          outlineColor="rgba(0,0,0,0.4)"
+        >
+          {data.caption}
+        </Text>
       )}
       
       {/* Back of the card (Gold) */}
